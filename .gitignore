@@ -1,3 +1,21 @@
+# Окружение
 .venv/
+venv/
+
+# Кэш Python
 __pycache__/
+*.py[cod]
+
+# Секреты
 .env
+
+# Данные и артефакты Project1 (большие бинарники не коммитим)
+data/
+*.sqlite3
+*.parquet
+qdrant_storage/
+
+# Служебное
+.idea/
+.vscode/
+.orca-preparing/
