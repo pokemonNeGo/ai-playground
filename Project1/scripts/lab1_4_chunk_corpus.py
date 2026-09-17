@@ -18,7 +18,7 @@ from src.chunking.fixed_size import chunk_text_fixed_size
 DB_PATH = Path("data/processed/ru_wikipedia_5000_normalized.sqlite3")
 CHUNK_SIZE = 500   # символов
 OVERLAP = 50       # символов
-LOG_PATH = Path("data/processed/lab2_1_chunking.log")
+LOG_PATH = Path("data/processed/lab1_4_chunking.log")
 
 # --- ЛОГИРОВАНИЕ ---
 logging.basicConfig(
