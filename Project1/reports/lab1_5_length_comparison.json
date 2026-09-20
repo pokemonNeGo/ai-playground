@@ -1,0 +1,122 @@
+{
+  "generated_at": "2026-09-20T14:41:52.033500+00:00",
+  "db_path": "data\\processed\\ru_wikipedia_5000_normalized.sqlite3",
+  "fixed_params": {
+    "strategy": "fixed_size",
+    "chunk_size": 500,
+    "overlap": 50,
+    "step": 450,
+    "table": "chunks"
+  },
+  "structural_params": {
+    "strategy": "structural",
+    "max_chars": 500,
+    "overlap": 0,
+    "table": "chunks_structural",
+    "note": "См. также reports/lab1_5_structural_stats.json, если вы меняли MAX_CHARS в скрипте."
+  },
+  "length_stats": {
+    "fixed": {
+      "count": 138785,
+      "min": 1,
+      "max": 500,
+      "mean": 490.0729185430702,
+      "median": 500,
+      "stdev": 56.82291166813375,
+      "p50": 500.0,
+      "p90": 500.0,
+      "p95": 500.0,
+      "p99": 500.0
+    },
+    "structural": {
+      "count": 162466,
+      "min": 2,
+      "max": 500,
+      "mean": 375.89424248765897,
+      "median": 407.0,
+      "stdev": 106.9404330985256,
+      "p50": 407.0,
+      "p90": 487.0,
+      "p95": 494.0,
+      "p99": 499.0
+    }
+  },
+  "doc_stats": {
+    "fixed": {
+      "docs_total": 4910,
+      "docs_with_chunks": 4910,
+      "docs_without_chunks": 0,
+      "chunks_per_doc_mean": 28.265784114052952,
+      "chunks_per_doc_median": 11.0,
+      "chunks_per_doc_min": 1,
+      "chunks_per_doc_max": 404
+    },
+    "structural": {
+      "docs_total": 4910,
+      "docs_with_chunks": 4910,
+      "docs_without_chunks": 0,
+      "chunks_per_doc_mean": 33.088798370672095,
+      "chunks_per_doc_median": 12.0,
+      "chunks_per_doc_min": 1,
+      "chunks_per_doc_max": 489
+    }
+  },
+  "histogram": [
+    {
+      "bucket": "0-199",
+      "fixed_count": 2227,
+      "structural_count": 14273,
+      "fixed_percent": 1.6046402709226502,
+      "structural_percent": 8.785222754299362
+    },
+    {
+      "bucket": "200-399",
+      "fixed_count": 2193,
+      "structural_count": 62745,
+      "fixed_percent": 1.5801419461757396,
+      "structural_percent": 38.62038826585255
+    },
+    {
+      "bucket": "400-499",
+      "fixed_count": 1048,
+      "structural_count": 84988,
+      "fixed_percent": 0.7551248333753647,
+      "structural_percent": 52.3112528159738
+    },
+    {
+      "bucket": "500-599",
+      "fixed_count": 133317,
+      "structural_count": 460,
+      "fixed_percent": 96.06009294952625,
+      "structural_percent": 0.2831361638742875
+    },
+    {
+      "bucket": "600-799",
+      "fixed_count": 0,
+      "structural_count": 0,
+      "fixed_percent": 0.0,
+      "structural_percent": 0.0
+    },
+    {
+      "bucket": "800-999",
+      "fixed_count": 0,
+      "structural_count": 0,
+      "fixed_percent": 0.0,
+      "structural_percent": 0.0
+    },
+    {
+      "bucket": "1000-1499",
+      "fixed_count": 0,
+      "structural_count": 0,
+      "fixed_percent": 0.0,
+      "structural_percent": 0.0
+    },
+    {
+      "bucket": "1500+",
+      "fixed_count": 0,
+      "structural_count": 0,
+      "fixed_percent": 0.0,
+      "structural_percent": 0.0
+    }
+  ]
+}

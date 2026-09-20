@@ -1,0 +1,23 @@
+{
+  "lab": "1.5",
+  "strategy": "structural",
+  "generated_at": "2026-09-20T14:37:45.432924+00:00",
+  "db_path": "data\\processed\\ru_wikipedia_5000_normalized.sqlite3",
+  "params": {
+    "max_chars": 500,
+    "overlap": 0,
+    "heading_detection": "explicit wiki/markdown/numbered/all-caps; fallback to paragraphs/sentences",
+    "long_block_split": "sentences, then spaces"
+  },
+  "documents_total": 4910,
+  "documents_failed": 0,
+  "documents_with_chunks": 4910,
+  "chunks_total": 162466,
+  "chunks_per_doc_mean_over_all_docs": 33.088798370672095,
+  "chunks_per_doc_mean_over_docs_with_chunks": 33.088798370672095,
+  "chunk_length_mean": 375.89424248765897,
+  "chunk_length_median": 407.0,
+  "chunk_length_min": 2,
+  "chunk_length_max": 500,
+  "failed_examples": []
+}
