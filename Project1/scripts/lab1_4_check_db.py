@@ -12,7 +12,7 @@ def main():
     cursor = conn.cursor()
     
     print("=" * 60)
-    print("📊 ПРОВЕРКА РЕЗУЛЬТАТОВ CHUNKING (Лаб 2.1)")
+    print("📊 ПРОВЕРКА РЕЗУЛЬТАТОВ CHUNKING (Лаб 1.4)")
     print("=" * 60)
     
     # 1. Сколько всего чанков?
