@@ -10,7 +10,7 @@
 | 1.3|Нормализация и дедупликация|✅ Выполнена|2026-09-17|Хранение: SQLite; Unicode NFC + нормализация пробелов/переносов; дедупликация по  doc_id  и  full_hash ; страницы-неоднозначности удалены; отчёт в  lab1_3_dedup_report.json|
 | 1.4|Chunking: фиксированный размер|✅ Выполнена|2026-09-17|chunk_size=500 символов, overlap=50 символов (шаг 450); 138 785 чанков из 4910 документов; таблица  chunks  в SQLite|
 | 1.5|Chunking: структурное|✅ Выполнена|2026-09-17|Структурное чанкование по заголовкам/абзацам; таблица `chunks_structural`; сравнение распределения длин со стратегией A|
-| 1.6|Эмбеддинги и Qdrant|⏳ Не начата|-|-|
+| 1.6 | Эмбеддинги и Qdrant | ✅ Выполнена | 2026-09-22 | Модель BAAI/bge-m3 (локальная копия models/bge-m3, ModelScope), вектор 1024, device cuda; Qdrant Docker (контейнер qdrant, том qdrant_storage), коллекция rag_documents, Cosine; batch 32 (смоук) / 128 (полный прогон); загружено 138 785 точек из таблицы chunks |
 | 1.7|BM25-индекс|⏳ Не начата|-|-|
 | 1.8|Плотный поиск|⏳ Не начата|-|-|
 | 1.9|Гибридный поиск (RRF)|⏳ Не начата|-|-|
@@ -64,33 +64,6 @@ data/processed/lab1_3_dedup_report.json
 достаточно для корпуса из 5000+ документов;
 удобно для дальнейших этапов: chunking, BM25, поиск, анализ.
 Parquet рассматривался как альтернатива для колоночной аналитики, но для текущего конвейера важнее простая таблица документов и удобные проверки через SQL.
-Хранение в Git
-Правило  `data/`  в корневом  `.gitignore`  исключает всю папку  `data/` , поэтому в Git НЕ хранится ни один файл из перечисленных выше, включая статистики  `.json` , логи, JSONL и SQLite-файл.
-Также НЕ хранятся в Git:
-.env
-.venv/
-venv/
- pycache /
-*.py[cod]
-*.sqlite3
-*.parquet
-qdrant_storage/
-.idea/
-.vscode/
-.orca-preparing/
-Хранятся в Git:
-src/
-scripts/
-tests/
-notebooks/
-docs/
-project_state.md
-.gitignore
-README.md
-Решение  по статистикам в Git:
-оставляем правило  `data/`  без точечных исключений;
-все артефакты из  `data/processed/`  считаются воспроизводимыми;
-при необходимости показать отчёт в репозитории можно вручную скопировать его в  `docs/reports/`  и закоммитить отдельно, но базовый сценарий этого не требует.
 Воспроизводимость
 Все артефакты `data/processed/` пересоздаются повторным запуском соответствующих скриптов:
 Лаб 1.1 — скрипт/ноутбук загрузки корпуса;
@@ -212,14 +185,26 @@ Parent-child (Лаб 1.13)
 Parent chunk size: [определится]
 Child chunk size: [определится]
 1.6 Эмбеддинги
-Модель: [bge-m3/e5-multilingual — определится в Лаб 1.6]
-Размерность вектора: [определится автоматически]
-Batch size для обработки: [определится]
+Модель: BAAI/bge-m3 через sentence-transformers; веса — локальная копия models/bge-m3 (источник ModelScope из-за троттлинга HF)
+Размерность вектора: 1024
+Batch size для обработки: 32 по умолчанию (.env); полный прогон — 128 (аргумент --batch-size)
+Нормализация векторов: normalize_embeddings=True
+Префиксы passage:/query: не используются (bge-m3)
+Устройство: cuda (NVIDIA GeForce RTX 3060 Laptop GPU, сборка torch CUDA 12.6)
+Что эмбеддится: только chunks.text; title/source хранятся в payload, в вектор не подмешиваются
+Модуль: src/indexing/embeddings.py
+Скрипт загрузки: scripts/lab1_6_embed_qdrant.py
+Отчёт: data/processed/lab1_6_embedding_report.json
+Лог: data/processed/lab1_6_embedding.log
 1.7 Векторная база данных
 Тип: Qdrant
-Способ запуска: [Docker/In-memory — определится в Лаб 1.6]
-Название коллекции: `rag_documents`
-Метрика сходства: [Cosine/Dot product]
+Способ запуска: Docker, контейнер qdrant, том qdrant_storage, порт 6333
+Название коллекции: rag_documents
+Метрика сходства: Cosine
+Point id: детерминированный uuid5 от chunk_id (повторный апсерт обновляет точки, дубли не создаются)
+Payload точки: chunk_id, doc_id, title, source, chunk_index, start_char, end_char, text, chunking_strategy, chunk_metadata, embedding_model, embedded_at
+Модуль: src/indexing/qdrant_index.py
+Проверка: scripts/lab1_6_check_qdrant.py (поиск через REST POST /points/search)
 1.8 Текстовый поиск (BM25)
 Реализация: [rank-bm25/SQLite FTS5 — определится в Лаб 1.7]
 1.9 Retrieval параметры
@@ -251,7 +236,8 @@ ai-playground/
 ├── project_state.md        # этот файл, состояние проекта (хранится в Git)
 ├── .env                     # API-ключи (появится в Лаб 1.6/1.11; в Git не хранится)
 │
-├── data/                   # ВСЯ папка не хранится в Git (правило  `data/`  в .gitignore)
+├── models/                   # локальные веса моделей (bge-m3); в Git не хранится (правило models/)
+├── data/                     # ВСЯ папка не хранится в Git (правило data/ в .gitignore)
 │   ├── raw/                # сырые документы
 │   │   └── ru_wikipedia_5000.jsonl                # Лаб 1.1 ✅
 │   │
@@ -270,9 +256,10 @@ ai-playground/
 │   │   ├── lab1_5_chunking.log                    # Лаб 1.5 ✅
 │   │   ├── lab1_5_structural_stats.json           # Лаб 1.5 ✅
 │   │   ├── lab1_5_length_comparison.json          # Лаб 1.5 ✅
-│   │   └── lab1_5_length_histogram.csv            # Лаб 1.5 ✅
-│   │
-│   └── indexes/            # BM25-индексы (появится в Лаб 1.7)
+│   │   ├── lab1_5_length_histogram.csv            # Лаб 1.5 ✅
+│   │   ├── lab1_6_embedding.log                   # Лаб 1.6 ✅
+│   └── └── lab1_6_embedding_report.json           # Лаб 1.6 ✅
+│
 │
 ├── notebooks/              # ноутбуки лабораторных
 │   ├── lab1_1_corpus_explo ration.ipynb            # Лаб 1.1 ✅
@@ -289,7 +276,10 @@ ai-playground/
 │   │   ├──  init .py                          # Лаб 1.4 ✅
 │   │   ├── fixed_size.py                        # Лаб 1.4 ✅
 │   │   └── structural.py                       # Лаб 1.5 ✅
-│   ├── indexing/           # embeddings.py, qdrant_index.py, bm25_index.py (Л аб 1.6-1.7)
+│   ├── indexing/            # embeddings.py, qdrant_index.py, bm25_index.py (Лаб 1.6-1.7)
+│   │   ├── __init__.py                          # Лаб 1.6 ✅
+│   │   ├── embeddings.py                        # Лаб 1.6 ✅
+│   │   └── qdrant_index.py                      # Лаб 1.6 ✅
 │   ├── retrieval/          # dense_search.py, hybrid_search.py, reranker.py (Лаб 1.8-1.10)
 │   ├── generation/         # llm_generator.py (Лаб 1.11)
 │   └── api/                 # main.py (FastAPI, Лаб 1.15)
@@ -303,27 +293,30 @@ ai-playground/
 │   ├── lab1_4_check_db.py                       # Лаб 1.4 ✅
 │   ├── lab1_5_chunk_structural.py               # Лаб 1.5 ✅
 │   ├── lab1_5_check_db.py                       # Лаб 1.5 ✅
-│   └── lab1_5_compare_chunks.py                 # Лаб 1.5 ✅
+│   ├── lab1_5_compare_chunks.py                 # Лаб 1.5 ✅
+│   ├── lab1_6_embed_qdrant.py                   # Лаб 1.6 ✅
+│   └── lab1_6_check_qdrant.py                   # Лаб 1.6 ✅
 │
 ├── tests/                  # хранится в Git
 │   ├── test_parser.py                            # Лаб 1.2 ✅ (8 тестов)
 │   ├── test_normalize.py                        # Лаб 1.3 ✅ (6 тестов)
 │   ├── test_chunking.py                         # Лаб 1.4 ✅ (4 теста)
-│   └── test_chunking_structural.py              # Лаб 1.5 ✅
+│   ├── test_chunking_structural.py              # Лаб 1.5 ✅
+│   └── test_indexing_helpers.py                 # Лаб 1.6 ✅ (5 тестов)
 │
 └──  docs/                   # документация и схема архитектуры (Лаб 1.15)
 📦 Установленные библиотеки
 Core
-Python: [версия, например 3.11]
+Python: 3.14
 FastAPI: [версия] — для API
 Uvicorn: [версия] — ASGI сервер
 ML & NLP
-sentence-transformers: [версия] — для эмбеддингов
+sentence-transformers: 6.1.0 — для эмбеддингов (использована в Лаб 1.6)
 rank-bm25: [версия] — для текстового поиска
 transformers: [версия] — для реранкера
-torch: [версия] — PyTorch backend
+torch: 2.14.0+cu126 — PyTorch backend (сборка CUDA 12.6, torch.cuda.is_available()=True, Лаб 1.6)
 Vector DB
-qdrant-client: [версия] — клиент Qdrant
+qdrant-client: 1.19.1 — клиент Qdrant (Лаб 1.6; метод search() в этой версии удалён, проверка поиска выполнена через REST)
 Data Processing
 datasets: [версия] — загрузка HuggingFace datasets (использовалась в Лаб 1.1)
 pandas: [версия] — обработка данных (использовалась в Лаб 1.1)
@@ -360,7 +353,8 @@ typing
 dataclasses
 Utilities
 python-dotenv: [версия] — переменные окружения
-tqdm: [версия] — прогресс-бары (использовалась в Лаб 1.1 и Лаб 1.4)
+tqdm: [версия] — прогресс-бары (использовалась в Лаб 1.1, Лаб 1.4 и Лаб 1.6)
+modelscope: [версия] — загрузка весов bge-m3 с ModelScope в локальную папку models/bge-m3 (Лаб 1.6)
 matplotlib/seaborn: [версия] — визуализация
 pydantic: [версия] — валидация данных
 jupyter: [версия] — для работы с notebooks
@@ -368,17 +362,23 @@ Testing
 pytest: [версия] — юнит-тесты (добавлена в Лаб 1.2)
 🔐 Переменные окружения (.env)
 Qdrant
+QDRANT_MODE=server
 QDRANT_HOST=localhost
 QDRANT_PORT=6333
+QDRANT_COLLECTION=rag_documents
 LLM Provider (Groq/Ollama/OpenAI)
 LLM_PROVIDER=groq
 LLM_API_KEY=your_api_key_here
 LLM_MODEL=llama-3.1-70b-versatile
-Embedding Model (если используется API)
-EMBEDDING_MODEL=BAAI/bge-m3
+Embedding Model
+EMBEDDING_MODEL=models/bge-m3
+EMBEDDING_DEVICE=cuda
+EMBEDDING_BATCH_SIZE=32
 Paths
 DATA_DIR=./data
 MODELS_DIR=./models
+DB_PATH=data/processed/ru_wikipedia_5000_normalized.sqlite3
+CHUNKS_TABLE=chunks
 📊 Схемы данных
 Document Schema (Лаб 1.1-1.2, сырой распарсенный JSONL)
 Реализована в Лаб 1.2: документы в  `data/processed/ru_wikipedia_5000_parsed.jsonl`  соответствуют этой схеме.
@@ -492,6 +492,9 @@ python scripts/lab1_3_normalize_dedup.py
 Чанкинг Лаб 1.4 выполнен в символах, а не в токенах: границы чанков не совпадают с грани цами токенов эмбеддинг-модели. При необходимости переход на токен-окна планируется в Лаб 1.6.
 Фиксированный размер чанка может разрывать предложения и смысловые блоки на границах;  перекрытие 50 символов частично компенсирует это. Структурное чанкование реализовано в Лаб 1.5 как альтернатива; его влияние оценивается по распределению длин и дальнейшему поиску.
 Структурный чанкер может не находить явные заголовки, если они были удалены парсером; в этом случае текст разбивается по абзацам и предложениям.
+Анонимные загрузки с Hugging Face троттлились до ~0.2–0.7 МБ/с; веса bge-m3 загружены с ModelScope в локальную папку models/bge-m3, в .gitignore добавлено правило models/.
+qdrant-client 1.19.1: метод search() удалён, вызов query_points() с именованным collection_name в этой сборке нестабилен; проверочный поиск в scripts/lab1_6_check_qdrant.py выполнен через REST POST /collections/{name}/points/search, что не зависит от версии клиента.
+Кеш Hugging Face на Windows без Developer Mode работает без symlinks (degraded-режим) — влияет только на расход места на диске, на результат не влияет.
 🎓 Ключевые инсайты
 Загрузка больших датасетов через  `streaming=True`  позволяет работать с корпусами без полного скачивания их на диск.
 Дедупликация по  `doc_id`  и  `title`  на этапе загрузки критична: в дампах Википедии часто встречаются страницы-редиректы и дубликаты.
@@ -508,6 +511,10 @@ python scripts/lab1_3_normalize_dedup.py
 Пакетна я вставка через  `executemany`  значительно ускоряет запись десятков тысяч чанков в SQLite по сравнению с построчным  `execute` .
 Хранение чанков в той же SQLite-базе, что и документы (с внешним ключом по  `doc_id` ), сохраняет связность «документ → чанки» без дополнительной инфраструктуры.
 Структурное чанкование лучше сохраняет границы абзацев и заголовков, но распределение длин становится менее равномерным; это нормально и требует сравнения с фиксированной стратегией.
+Детерминированный point id (uuid5 от chunk_id) делает перезагрузку коллекции идемпотентной: повторный прогон обновляет те же точки, а не создаёт дубли.
+Узкое место пакетной загрузки при малых батчах — не GPU, а накладные расходы upsert: при batch 32 throughput ~47 чанков/с, укрупнение батча до 128 кратно ускоряет полный прогон.
+Локальная копия весов модели (models/bge-m3) полностью убирает сетевую зависимость конвейера: все последующие запуски стартуют без обращений к Hugging Face.
+Проверка поиска через REST-эндпоинт Qdrant вместо клиентского метода защищает лабораторные от смены API qdrant-client между версиями.
 📝 Заметки для следующих сессий
 Лаб 1.2 выполнена: парсер  `src/ingestion/parser.py` , тесты  `tests/test_parser.py`  зелёные (8 тестов), корпус распарсен 5000/5000,  `failed = 0` .
 Лаб 1.3 выполнена: нормализация, дедупликация и сохранение корпуса в SQLite реализованы.
@@ -532,7 +539,6 @@ python scripts/lab1_3_normalize_dedup.py
 Модуль чанкинга: `src/chunking/structural.py`, функция `chunk_text_structural()`.
 Скрипт Лаб 1.5: `scripts/lab1_5_chunk_structural.py`; проверка: `scripts/lab1_5_check_db.py`; сравнение: `scripts/lab1_5_compare_chunks.py`.
 Тесты Лаб 1.5: `tests/test_chunking_structural.py` зелёные.
-Готово к Лаб 1.6 (эмбеддинги и Qdrant).
 Быстрый перезапуск Лаб 1.3
 Из папки `Project1` с активированным виртуальным окружением:
 python -m pytest tests/test_normalize.py -q
@@ -565,3 +571,23 @@ python -m scripts.lab1_5_compare_chunks
 таблица `chunks_structural` пересоздаётся;
 проверка показывает отсутствие пустых чанков, дублей `chunk_id`, дублей `doc_id + chunk_index` и корректность `start_char`/`end_char`;
 скрипт сравнения создаёт отчёты распределения длин стратегии A и стратегии B.
+Лаб 1.6 выполнена: эмбеддинги и загрузка векторов в Qdrant реализованы.
+Модель: BAAI/bge-m3, локальная копия models/bge-m3 (ModelScope); размерность вектора 1024; устройство cuda.
+Qdrant: Docker, контейнер qdrant, том qdrant_storage; коллекция rag_documents; метрика Cosine; 138 785 точек из таблицы chunks.
+Модули: src/indexing/embeddings.py, src/indexing/qdrant_index.py.
+Скрипты: scripts/lab1_6_embed_qdrant.py (загрузка), scripts/lab1_6_check_qdrant.py (проверка коллекции и тестовый поиск).
+Тесты: tests/test_indexing_helpers.py зелёные (5 тестов).
+Отчёт: data/processed/lab1_6_embedding_report.json; лог: data/processed/lab1_6_embedding.log.
+Быстрый перезапуск Лаб 1.6
+Из папки Project1 с активированным виртуальным окружением:
+docker start qdrant
+python -m pytest tests/test_indexing_helpers.py -q
+python -m scripts.lab1_6_embed_qdrant --limit 100 --recreate
+python -m scripts.lab1_6_check_qdrant
+python -m scripts.lab1_6_embed_qdrant --recreate --batch-size 128
+python -m scripts.lab1_6_check_qdrant
+Ожидаемый результат:
+тесты проходят (5 тестов);
+коллекция rag_documents пересоздаётся с размерностью 1024;
+после полного прогона Points count: 138785;
+тестовый поиск возвращает релевантные чанки с payload (title, doc_id, chunk_id, text).
