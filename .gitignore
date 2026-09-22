@@ -14,6 +14,7 @@ data/
 *.sqlite3
 *.parquet
 qdrant_storage/
+models/
 
 # Служебное
 .idea/
