@@ -19,4 +19,4 @@ models/
 # Служебное
 .idea/
 .vscode/
-.orca-preparing/
+.local/
